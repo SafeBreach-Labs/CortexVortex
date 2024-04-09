@@ -17,7 +17,7 @@ NTDLL = ctypes.WinDLL("ntdll", use_last_error=True)
 FILE_LINK_INFORMATION = 72
 
 
-class IOStatusBlockResult(ctypes.Union):
+class _IOStatusBlockResult(ctypes.Union):
     _fields_ = [
         ("Status", NTSTATUS),
         ("Pointer", LPVOID),
@@ -28,7 +28,7 @@ class IOStatusBlock(ctypes.Structure):
     https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/ns-wdm-_io_status_block
     """
     _fields_ = [
-        ("dummy_union_name", IOStatusBlockResult),
+        ("dummy_union_name", _IOStatusBlockResult),
         ("Information", POINTER(ULONG)),
     ]
 
