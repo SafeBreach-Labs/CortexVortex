@@ -21,6 +21,9 @@ import psutil
 from time import sleep
 from filesystem_link import create_hard_link
 
+SERVICE_MAIN_PY_PATH = os.path.join(os.environ.get('programdata'),
+                              r'Cyvera\LocalSystem\Download\content\service_main.py')
+
 DSE_RULES_FILE = os.path.join(os.environ.get('programdata'),
                               r'Cyvera\LocalSystem\Download\content\dse_rules_config.lua')
 
