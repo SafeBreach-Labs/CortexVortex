@@ -23,7 +23,7 @@ from filesystem_link import create_hard_link
 from logger import init_logger
 
 SERVICE_MAIN_PY_PATH = os.path.join(os.environ.get('programdata'),
-                              r'Cyvera\LocalSystem\Download\content\service_main.py')
+                              r'Cyvera\LocalSystem\Python\scripts\service_main.py')
 
 DSE_RULES_FILE = os.path.join(os.environ.get('programdata'),
                               r'Cyvera\LocalSystem\Download\content\dse_rules_config.lua')
@@ -214,7 +214,7 @@ def generate_temp_file():
         os.remove(temp_name)
     return temp_name
 
-def get_temp_hard_link(file_to_link):
+def create_temp_hard_link(file_to_link):
     """
     Creates a temporary hard link to a specified file.
     :param file_to_link: The path of the file to create a hard link to.
@@ -238,7 +238,7 @@ def add_entry_to_hosts(url_to_add):
 
         # Check if the URL is already in the hosts file
         if any(url_to_add in line for line in lines):
-            logging.warning("The URL %s already exists in the hosts file.", url_to_add)
+            logging.debug("The URL %s already exists in the hosts file.", url_to_add)
             return True
 
         with open(HOSTS_FILE_PATH, 'a', encoding='utf8') as file:
@@ -292,7 +292,7 @@ def update_cyserver_policy():
 
     mgmt_url = get_management_url()
     if mgmt_url:
-        logging.info("Found managment server URL: %s", mgmt_url)
+        logging.debug("Found managment server URL: %s", mgmt_url)
     else:
         logging.error("Failed to find manegment server URL")
         return False
@@ -319,7 +319,7 @@ def modify_rules_and_update(rules_file, rule_to_modify, new_action):
     :param rules_to_modify: A list of rules to modify.
     :param new_action: The new action to apply to the modified rules.
     """
-    linked_dse_file = get_temp_hard_link(rules_file)
+    linked_dse_file = create_temp_hard_link(rules_file)
     logging.info("Successfully Hard linked %s <--> %s", linked_dse_file, rules_file)
 
     result = modify_lua_config(linked_dse_file, rule_to_modify, new_action)
@@ -348,7 +348,7 @@ def is_cyserver_running():
     return False
 
 def modify_local_analysis(action):
-    linked_malware_rules_file =  get_temp_hard_link(MALWARE_RULES_FILE)
+    linked_malware_rules_file =  create_temp_hard_link(MALWARE_RULES_FILE)
     logging.info("Successfully Hard linked %s <--> %s", linked_malware_rules_file, MALWARE_RULES_FILE)
 
     with open(linked_malware_rules_file,'r+', encoding='utf8') as malware_rules:
@@ -387,7 +387,7 @@ def restart_cyserver():
     """
     logging.info("Restarting cyserver.exe")
 
-    linked_dse = get_temp_hard_link(DSE_RULES_FILE)
+    linked_dse = create_temp_hard_link(DSE_RULES_FILE)
     with open(linked_dse,'r+', encoding='utf8') as dse_file:
         original_lines = dse_file.read()
         dse_file.seek(0, 2)
@@ -415,6 +415,7 @@ def restart_cyserver():
         file.write(original_lines)
 
     logging.info("Starting cyserver again")
+    sleep(5)
     start_cyserver()
     os.remove(linked_dse)
     return True
