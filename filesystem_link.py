@@ -5,12 +5,13 @@ More info about it can be found in this blogpost:
 https://googleprojectzero.blogspot.com/2015/12/between-rock-and-hard-link.html
 """
 import ctypes
-import os.path
 import logging
-from ctypes.wintypes import LPVOID, ULONG, BOOL
-from ctypes import wintypes, POINTER
-import win32file
+import os.path
+from ctypes import POINTER, wintypes
+from ctypes.wintypes import BOOL, LPVOID, ULONG
+
 import win32con
+import win32file
 
 NTSTATUS = wintypes.LONG
 NTDLL = ctypes.WinDLL("ntdll", use_last_error=True)

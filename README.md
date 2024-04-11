@@ -22,7 +22,7 @@ CortexVortex run_as_malware <path_to_python_file>
 - `change_rules`: Change Cortex XDR rules.
 - `local_analysis`: Disable/Enable XDR's local analysis.
 - `restart_xdr`: Restart Cortex XDR process.
-- `run_as_malware`: Allows any given python code to run under cortex-xdr-payload process.
+- `run_as_malware`: Allows any given python code to run within cortex-xdr-payload process.
 
 ## Examples
 

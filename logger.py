@@ -15,8 +15,9 @@ Example usage:
     logging.error("This is an error message.")
 """
 
-import sys
 import logging
+import sys
+
 
 class CortexVortexLogger(logging.Formatter):
     """

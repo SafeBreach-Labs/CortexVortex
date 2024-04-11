@@ -10,26 +10,28 @@ It includes:
 """
 
 import argparse
-import os
-import re
 import json
-import random
 import logging
-import tempfile
+import os
+import random
+import re
 import subprocess
+import tempfile
 from time import sleep
+
 import psutil
+
 from filesystem_link import create_hard_link
 from logger import init_logger
 
-SERVICE_MAIN_PY_PATH = os.path.join(os.environ.get('programdata'),
-                              r'Cyvera\LocalSystem\Python\scripts\service_main.py')
+SERVICE_MAIN_PY_PATH = os.path.expandvars(r'%ProgramData%\
+                                          Cyvera\LocalSystem\Python\scripts\service_main.py')
 
-DSE_RULES_FILE = os.path.join(os.environ.get('programdata'),
-                              r'Cyvera\LocalSystem\Download\content\dse_rules_config.lua')
+DSE_RULES_FILE = os.path.expandvars(r'%ProgramData%\
+                                    Cyvera\LocalSystem\Download\content\dse_rules_config.lua')
 
-MALWARE_RULES_FILE = os.path.join(os.environ.get('programdata'),
-                              r'Cyvera\LocalSystem\Download\content\malware.lua')
+MALWARE_RULES_FILE = os.path.expandvars(r'%ProgramData%\
+                                        Cyvera\LocalSystem\Download\content\malware.lua')
 
 
 HOSTS_FILE_PATH = os.path.join(os.environ.get('systemroot'), r'System32\drivers\etc\hosts')
@@ -68,6 +70,7 @@ def _do_checkin():
     args = [CYTOOL_PATH, 'checkin']
     p = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return_code = p.wait()
+    sleep(10)
     return return_code
 
 def start_cyserver():
@@ -99,15 +102,13 @@ def get_management_url():
     mgmt_url = None
 
     # Method 1 of getting the manegment server URL:
-    try:
+    if os.path.exists(MGMT_URL_FILE_1):
         with open(MGMT_URL_FILE_1, 'r', encoding='utf8') as mgmt_server_url_file:
             mgmt_url = mgmt_server_url_file.read()
 
-        return mgmt_url
-
-    except FileNotFoundError:
+        return mgmt_url.removeprefix("https://")
+    else:
         logging.error("Managment file: %s was not found", MGMT_URL_FILE_1)
-
 
 
     # Method 2 of getting the manegment server URL:
@@ -134,13 +135,13 @@ def get_management_url():
             mgmt_url = file_data['entries'][1]['value']['cloud_communication_data'] \
                 ['home_server']['url']
             logging.info("Found MGMT URL: %s", mgmt_url)
+            return mgmt_url.removeprefix("https://")
+        
         except KeyError as e:
             logging.error("Failed to retrive MGMT URL from cloud_frontend file")
             logging.error(e)
             logging.error("Exiting")
             exit()
-
-    return mgmt_url
 
 def modify_lua_config(lua_file_path, config_name, new_action):
     """
@@ -203,7 +204,7 @@ def modify_lua_config(lua_file_path, config_name, new_action):
     
     return True
 
-def generate_temp_file():
+def generate_temp_file_name():
     """
     Generates a temporary file name.
     :return: A string representing the path of the temporary file.
@@ -224,6 +225,8 @@ def create_temp_hard_link(file_to_link):
     
     linked_dse_file = generate_temp_file()
     create_hard_link(file_to_link, linked_dse_file)
+
+    logging.info("Successfully Hard linked %s <--> %s", linked_dse_file, file_to_link)
     return linked_dse_file
 
 def add_entry_to_hosts(url_to_add):
@@ -233,20 +236,24 @@ def add_entry_to_hosts(url_to_add):
     """
 
     try:
-        with open(HOSTS_FILE_PATH, 'r', encoding='utf8') as file:
-            lines = file.readlines()
+        if os.path.exists(HOSTS_FILE_PATH):
+            with open(HOSTS_FILE_PATH, 'r', encoding='utf8') as file:
+                lines = file.readlines()
 
-        # Check if the URL is already in the hosts file
-        if any(url_to_add in line for line in lines):
-            logging.debug("The URL %s already exists in the hosts file.", url_to_add)
-            return True
+             # Check if the URL is already in the hosts file
+            if any(url_to_add in line for line in lines):
+                logging.debug("The URL %s already exists in the hosts file.", url_to_add)
+                return True
 
-        with open(HOSTS_FILE_PATH, 'a', encoding='utf8') as file:
-            file.write(f"\n{LOCALHOST}\t{url_to_add}\n")
-            return True
+            with open(HOSTS_FILE_PATH, 'a', encoding='utf8') as file:
+                file.write(f"\n{LOCALHOST}\t{url_to_add}\n")
+                return True
+        else:
+            with open(HOSTS_FILE_PATH, 'w', encoding='utf8') as file:
+                logging.debug("Hosts file not found, creating new one")
+                file.write(f"\n{LOCALHOST}\t{url_to_add}\n")
+                return True
 
-    except FileNotFoundError:
-        logging.error("Hosts file not found.")
     except PermissionError:
         logging.error("Permission denied when tried to edit hosts file. Please run the script with appropriate permissions.")
     
@@ -257,6 +264,7 @@ def remove_entry_from_hosts(url_to_remove):
     Removes an entry from the hosts file if it exists.
     :param url_to_remove: The URL to be removed from the hosts file.
     """
+    # TODO: Consider delete this function, no one use it.
 
     try:
         with open(HOSTS_FILE_PATH, 'r', encoding='utf8') as file:
@@ -298,13 +306,12 @@ def update_cyserver_policy():
         return False
 
     logging.info("Inserting managment URL to hosts file")
-    if not add_entry_to_hosts(mgmt_url.replace("https://","")):
+    if not add_entry_to_hosts(mgmt_url):
         logging.error("Failed to update hosts file")
         return False
 
     logging.info("Initiating check-in (~10 seconds)")
     _do_checkin()
-    sleep(10)
     return True
 
 
@@ -320,7 +327,6 @@ def modify_rules_and_update(rules_file, rule_to_modify, new_action):
     :param new_action: The new action to apply to the modified rules.
     """
     linked_dse_file = create_temp_hard_link(rules_file)
-    logging.info("Successfully Hard linked %s <--> %s", linked_dse_file, rules_file)
 
     result = modify_lua_config(linked_dse_file, rule_to_modify, new_action)
 
@@ -329,6 +335,7 @@ def modify_rules_and_update(rules_file, rule_to_modify, new_action):
         update_cyserver_policy()
     else:
         logging.error("Failed to modify rules")
+        # TODO: Handle this case, need to raise exception.
     
     logging.info("Unlink files %s <-X-> %s",linked_dse_file, rules_file)
     os.remove(linked_dse_file)
@@ -349,7 +356,6 @@ def is_cyserver_running():
 
 def modify_local_analysis(action):
     linked_malware_rules_file =  create_temp_hard_link(MALWARE_RULES_FILE)
-    logging.info("Successfully Hard linked %s <--> %s", linked_malware_rules_file, MALWARE_RULES_FILE)
 
     with open(linked_malware_rules_file,'r+', encoding='utf8') as malware_rules:
         new_malware_rules_data = malware_rules.read()
