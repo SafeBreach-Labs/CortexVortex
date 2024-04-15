@@ -24,24 +24,22 @@ import psutil
 from filesystem_link import create_hard_link
 from logger import init_logger
 
-SERVICE_MAIN_PY_PATH = os.path.expandvars(r'%ProgramData%\
-                                          Cyvera\LocalSystem\Python\scripts\service_main.py')
+TEMP_DSE_FILE_PATH = os.path.expandvars(r'%temp%\dse_rules_lua.tmp')
 
-DSE_RULES_FILE = os.path.expandvars(r'%ProgramData%\
-                                    Cyvera\LocalSystem\Download\content\dse_rules_config.lua')
+SERVICE_MAIN_PY_PATH = os.path.expandvars(r'%ProgramData%\Cyvera\LocalSystem\Python\scripts\service_main.py')
 
-MALWARE_RULES_FILE = os.path.expandvars(r'%ProgramData%\
-                                        Cyvera\LocalSystem\Download\content\malware.lua')
+DSE_RULES_FILE = os.path.expandvars(r'%ProgramData%\Cyvera\LocalSystem\Download\content\dse_rules_config.lua')
 
+MALWARE_RULES_FILE = os.path.expandvars(r'%ProgramData%\Cyvera\LocalSystem\Download\content\malware.lua')
 
-HOSTS_FILE_PATH = os.path.join(os.environ.get('systemroot'), r'System32\drivers\etc\hosts')
+HOSTS_FILE_PATH = os.path.expandvars(r'%SystemRoot%\System32\drivers\etc\hosts')
 
-PREVENTION_FOLDER_PATH = os.path.join(os.environ.get('programdata'), r'Cyvera\Prevention')
+PREVENTION_FOLDER_PATH = os.path.expandvars(r'%ProgramData%\Cyvera\Prevention')
 
-CYTOOL_PATH = os.path.join(os.environ.get('programfiles'), r'Palo Alto Networks\Traps\cytool')
+CYTOOL_PATH = os.path.expandvars(r'%ProgramFiles%\Palo Alto Networks\Traps\cytool')
 
-MGMT_URL_FILE_1 = os.path.join(os.environ.get('programdata'),
-                                r'Cyvera\LocalSystem\Data\db_backup\core_home_url.txt')
+MGMT_URL_FILE_1 = os.path.expandvars(r'%ProgramData%\Cyvera\LocalSystem\Data\db_backup\core_home_url.txt')
+
 
 
 ENABLE_WILD_FIRE_RULE = "file_settings.EnableWildFire"
@@ -153,9 +151,12 @@ def modify_lua_config(lua_file_path, config_name, new_action):
 
     :param lua_file_path: The path to the Lua file.
     :param config_name: The name of the Lua configuration to modify.
-    :param new_action: The new action to set for the configuration.
+    :param new_action: The new action to set for the configuration, this value can be <allow, block, internal>
     """
 
+    if new_action not in ACTION_VALUES:
+        raise ValueError("Wrong value, values can be <allow, block, internal>")
+    
     try:
         with open(lua_file_path, 'r', encoding='utf8') as file:
             lua_content = file.readlines()
@@ -165,8 +166,11 @@ def modify_lua_config(lua_file_path, config_name, new_action):
 
     found_config = False
     config_lines_to_modify = []
+
+    # The following patterns used to identify rules within the dse rules file.
     config_name_pattern = f'.*\\[".*?{config_name}.*"\\] = '
     action_pattern = r"action = \"(.+?)\""
+
     # Get all the lines that contains the given config_name
     for i, line in enumerate(lua_content):
         # Check if the current line contains the configuration name
@@ -187,7 +191,7 @@ def modify_lua_config(lua_file_path, config_name, new_action):
                 logging.error("Corrupted DSE file \\ Error parsing, discard changes")
                 return False
 
-            lua_content[line_idx+action_idx] = re.sub(action_pattern, 'action = "allow"',
+            lua_content[line_idx+action_idx] = re.sub(action_pattern, f'action = "{new_action}"',
                                                       lua_content[line_idx+action_idx])
 
         try:
@@ -204,16 +208,6 @@ def modify_lua_config(lua_file_path, config_name, new_action):
     
     return True
 
-def generate_temp_file_name():
-    """
-    Generates a temporary file name.
-    :return: A string representing the path of the temporary file.
-    """
-
-    temp_name = tempfile.gettempdir() + f"\\dse_linked_tmp_{str(random.randint(0,10000))}"
-    if os.path.exists(temp_name):
-        os.remove(temp_name)
-    return temp_name
 
 def create_temp_hard_link(file_to_link):
     """
@@ -222,12 +216,15 @@ def create_temp_hard_link(file_to_link):
     :return: A string representing the path of the linked file.
     """
     # TODO: check the return value of create_hard_link
-    
-    linked_dse_file = generate_temp_file()
-    create_hard_link(file_to_link, linked_dse_file)
+    linked_dse_file_name = TEMP_DSE_FILE_PATH
+    if os.path.exists(linked_dse_file_name):
+        os.remove(linked_dse_file_name)
 
-    logging.info("Successfully Hard linked %s <--> %s", linked_dse_file, file_to_link)
-    return linked_dse_file
+    logging.info("Trying to Hard link %s <--> %s", linked_dse_file_name, file_to_link)
+    create_hard_link(file_to_link, linked_dse_file_name)
+
+    logging.info("Successfully Hard linked %s <--> %s", linked_dse_file_name, file_to_link)
+    return linked_dse_file_name
 
 def add_entry_to_hosts(url_to_add):
     """
