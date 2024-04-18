@@ -122,10 +122,7 @@ def get_management_url():
                 break
 
     if cloud_frontend_file is None:
-        logging.error("cloud_frontend file not found")
-        logging.error("Failed to retrive MGMT URL")
-        logging.error("Exiting")
-        exit()
+        raise FileNotFoundError("cloud_frontend file not found, Failed to retrive MGMT URL")
 
     with open(cloud_frontend_file, 'r', encoding='utf8') as json_file:
         file_data = json.load(json_file)
@@ -205,7 +202,7 @@ def modify_lua_config(lua_file_path, config_name, new_action):
 
     else:
         logging.warning("Configuration '%s' not found in the Lua file.", config_name)
-    
+
     return True
 
 
@@ -256,37 +253,6 @@ def add_entry_to_hosts(url_to_add):
     
     return False
 
-def remove_entry_from_hosts(url_to_remove):
-    """
-    Removes an entry from the hosts file if it exists.
-    :param url_to_remove: The URL to be removed from the hosts file.
-    """
-    # TODO: Consider delete this function, no one use it.
-
-    try:
-        with open(HOSTS_FILE_PATH, 'r', encoding='utf8') as file:
-            hosts_lines = file.readlines()
-
-        # Check if the URL is exists in the hosts file
-        if all(not url_to_remove in line for line in hosts_lines):
-            logging.warning("The URL %s not found in hosts file.", url_to_remove)
-            return True
-
-        with open(HOSTS_FILE_PATH, 'w', encoding='utf8') as file:
-            for line in hosts_lines:
-                if url_to_remove not in line:
-                    file.write(line)
-            
-            return True
-
-    except FileNotFoundError:
-        logging.error("Hosts file not found.")
-    except PermissionError:
-        logging.error("Permission denied when tried to edit hosts file. Please run the script with appropriate permissions.")
-
-    return False
-
-
 
 def update_cyserver_policy():
     """
@@ -331,7 +297,7 @@ def modify_rules_and_update(rules_file, rule_to_modify, new_action):
         logging.info("Rules modified sucussfully")
         update_cyserver_policy()
     else:
-        logging.error("Failed to modify rules")
+        raise Exception("Failed to modify rules")
         # TODO: Handle this case, need to raise exception.
     
     logging.info("Unlink files %s <-X-> %s",linked_dse_file, rules_file)

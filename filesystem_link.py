@@ -49,7 +49,6 @@ NtSetInformationFile.argtypes = [ctypes.wintypes.HANDLE,  # FileHandle
                                  ]
 NtSetInformationFile.restype = NTSTATUS
 
-# pylint: disable=attribute-defined-outside-init
 def file_link_information_factory(length_file_name):
     """
     Generate dynamically sized struct FILE_LINK_INFORMATION

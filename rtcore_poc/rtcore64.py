@@ -33,7 +33,6 @@ class Rtcore64MemoryWrite(Structure):
                 ("write_value", c_uint32),
                 ("pad3",c_byte * 0x10)]
 
-# pylint: disable=attribute-defined-outside-init
 class Rtcore64MemoryRead(Structure):
     """
     Structure for reading kernel memory using RTCore64.
