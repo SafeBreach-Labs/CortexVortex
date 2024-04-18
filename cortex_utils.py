@@ -52,7 +52,8 @@ LOCALHOST = "127.0.0.1"
 MGMT_URL_FILE_2 = "cloud_frontend.json"
 ACTION_VALUES = ["allow", "block", "internal"]
 ENABLED_OPTIONS = ["enable", "disable"]
-
+STATUS_SUCCESS = 0x0
+STATUS_ACCESS_VIOLATION = 0xC0000005
 
 def _do_checkin():
     """
@@ -212,13 +213,18 @@ def create_temp_hard_link(file_to_link):
     :param file_to_link: The path of the file to create a hard link to.
     :return: A string representing the path of the linked file.
     """
-    # TODO: check the return value of create_hard_link
     linked_dse_file_name = TEMP_DSE_FILE_PATH
     if os.path.exists(linked_dse_file_name):
         os.remove(linked_dse_file_name)
 
     logging.info("Trying to Hard link %s <--> %s", linked_dse_file_name, file_to_link)
-    create_hard_link(file_to_link, linked_dse_file_name)
+    res = create_hard_link(file_to_link, linked_dse_file_name)
+
+    if res != STATUS_SUCCESS:
+        if res == STATUS_ACCESS_VIOLATION:
+            raise PermissionError("Failed to linked files, make sure you have permissions to the target file")
+        else:
+            raise Exception("Failed to hard link files: %d", res)
 
     logging.info("Successfully Hard linked %s <--> %s", linked_dse_file_name, file_to_link)
     return linked_dse_file_name
@@ -298,7 +304,6 @@ def modify_rules_and_update(rules_file, rule_to_modify, new_action):
         update_cyserver_policy()
     else:
         raise Exception("Failed to modify rules")
-        # TODO: Handle this case, need to raise exception.
     
     logging.info("Unlink files %s <-X-> %s",linked_dse_file, rules_file)
     os.remove(linked_dse_file)
