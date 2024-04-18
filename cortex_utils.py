@@ -217,7 +217,6 @@ def create_temp_hard_link(file_to_link):
     if os.path.exists(linked_dse_file_name):
         os.remove(linked_dse_file_name)
 
-    logging.info("Trying to Hard link %s <--> %s", linked_dse_file_name, file_to_link)
     res = create_hard_link(file_to_link, linked_dse_file_name)
 
     if res != STATUS_SUCCESS:
