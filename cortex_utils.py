@@ -24,7 +24,7 @@ import psutil
 from filesystem_link import create_hard_link
 from logger import init_logger
 
-TEMP_DSE_FILE_PATH = os.path.expandvars(r'%temp%\dse_rules_lua.tmp')
+TEMP_PATH = os.path.expandvars(r'%temp%\\')
 
 SERVICE_MAIN_PY_PATH = os.path.expandvars(r'%ProgramData%\Cyvera\LocalSystem\Python\scripts\service_main.py')
 
@@ -213,7 +213,7 @@ def create_temp_hard_link(file_to_link):
     :param file_to_link: The path of the file to create a hard link to.
     :return: A string representing the path of the linked file.
     """
-    linked_dse_file_name = TEMP_DSE_FILE_PATH
+    linked_dse_file_name = TEMP_PATH + os.path.basename(file_to_link) + ".tmp"
     if os.path.exists(linked_dse_file_name):
         os.remove(linked_dse_file_name)
 
@@ -255,6 +255,7 @@ def add_entry_to_hosts(url_to_add):
 
     except PermissionError:
         logging.error("Permission denied when tried to edit hosts file. Please run the script with appropriate permissions.")
+        exit()
     
     return False
 
@@ -382,7 +383,7 @@ def restart_cyserver():
         sleep(1)
 
     logging.info("cyserver.exe crashed successfully")
-    logging.info("Reverting changes")
+    logging.info("Reverting changes for DSE_rules_config.lua")
 
     with open(linked_dse, 'w', encoding='utf8') as file:
         file.write(original_lines)
