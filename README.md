@@ -2,12 +2,6 @@
 
 CortexVortex is a command-line tool for managing Cortex XDR, providing functionalities to modify Cortex XDR settings such as changing rules, restarting the XDR process, disabling the local analysis engine, and inserting any python code to run within cortex-xdr-payload.exe process.
 
-## Installation
-
-```bash
-pip install cortexvortex
-```
-
 ## Usage
 
 ```bash
